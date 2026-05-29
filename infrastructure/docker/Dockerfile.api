@@ -1,0 +1,25 @@
+FROM node:20-alpine AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json package-lock.json* ./
+COPY apps/api/package.json apps/api/
+COPY apps/api/prisma apps/api/prisma/
+RUN cd apps/api && npm install --legacy-peer-deps
+RUN cd apps/api && npx prisma generate
+
+FROM base AS builder
+COPY --from=deps /app/apps/api/node_modules apps/api/node_modules
+COPY --from=deps /app/apps/api/prisma apps/api/prisma
+COPY apps/api apps/api
+WORKDIR /app/apps/api
+RUN npx nest build
+
+FROM base AS runner
+ENV NODE_ENV=production
+COPY --from=builder /app/apps/api/dist dist
+COPY --from=deps /app/apps/api/node_modules node_modules
+COPY --from=deps /app/apps/api/prisma prisma
+
+EXPOSE 4000
+CMD ["node", "dist/main"]
