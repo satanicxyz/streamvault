@@ -14,7 +14,9 @@ export class ContentService {
     search?: string;
     status?: ContentStatus;
   }) {
-    const { page = 1, limit = 20, type, genreId, search, status } = params;
+    const { type, genreId, search, status } = params;
+    const page = (params.page && Number.isFinite(params.page) && params.page > 0) ? params.page : 1;
+    const limit = (params.limit && Number.isFinite(params.limit) && params.limit > 0) ? params.limit : 20;
     const skip = (page - 1) * limit;
 
     const where: Prisma.ContentWhereInput = {
@@ -82,25 +84,27 @@ export class ContentService {
     return content;
   }
 
-  async getTrending(limit = 10) {
+  async getTrending(limit?: number) {
+    const take = (limit && Number.isFinite(limit) && limit > 0) ? limit : 10;
     return this.prisma.content.findMany({
       where: { status: ContentStatus.PUBLISHED },
       orderBy: { viewCount: 'desc' },
-      take: limit,
+      take,
       include: { genres: { include: { genre: true } } },
     });
   }
 
-  async getNewReleases(limit = 10) {
+  async getNewReleases(limit?: number) {
+    const take = (limit && Number.isFinite(limit) && limit > 0) ? limit : 10;
     return this.prisma.content.findMany({
       where: { status: ContentStatus.PUBLISHED },
       orderBy: { createdAt: 'desc' },
-      take: limit,
+      take,
       include: { genres: { include: { genre: true } } },
     });
   }
 
-  async getMicroDramas(page = 1, limit = 20) {
+  async getMicroDramas(page?: number, limit?: number) {
     return this.findAll({
       page,
       limit,
